@@ -64,3 +64,30 @@ Effective database design requires visualizing the business domain, understandin
 
 - Generate and insert sample data for the **TXN_LOG** table.
 - Begin planning and implementing the PL/SQL components for the application.
+
+## Day 3
+
+### Accomplishments
+
+- Successfully loaded **10,000 sample records** into the **TXN_LOG** table.
+- Expanded the list of transaction types beyond the initial four to better reflect real-world banking operations.
+- Created the initial **PL/SQL package skeleton**, including:
+  - Package Specification (Declaration)
+  - Package Body
+
+### Challenge
+
+While modifying the `CHECK` constraint for the transaction types using the `ALTER TABLE` command, I discovered that the existing constraint was still present.
+
+I learned that before creating a new `CHECK` constraint, the old constraint must first be dropped using its constraint name. This was a valuable lesson in managing database schema changes.
+
+### What I Learned
+
+- Schema modifications require careful management of existing constraints.
+- Understanding constraint names and how to modify them is an important part of database maintenance.
+- Building the package structure first provides a solid foundation before implementing the business logic.
+
+### Next Steps
+
+- Design and implement the PL/SQL package procedures and functions.
+- Begin adding core banking operations such as deposits, withdrawals, fund transfers, and balance enquiries.
