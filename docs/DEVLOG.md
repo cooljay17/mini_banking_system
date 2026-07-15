@@ -91,3 +91,33 @@ I learned that before creating a new `CHECK` constraint, the old constraint must
 
 - Design and implement the PL/SQL package procedures and functions.
 - Begin adding core banking operations such as deposits, withdrawals, fund transfers, and balance enquiries.
+
+## Day 4
+
+### Accomplishments
+
+- Successfully implemented my first PL/SQL function and included it within a package.
+- Executed the package successfully and verified the function worked as expected.
+- Developed a simple **Account Balance Check** function.
+- Added business validation using a **user-defined exception** to raise an error when an account is inactive.
+
+### Challenge
+
+One issue kept me stuck for quite some time—the `/` at the end of the package script. It was causing compilation errors because of how I was executing the script.
+
+After troubleshooting, I realized that I should **ignore/remove the `/`** in my current execution environment. Once I did that, the package compiled successfully.
+
+It was a simple issue, but an important lesson in understanding how different SQL execution tools handle PL/SQL scripts.
+
+### What I Learned
+
+- PL/SQL packages provide a clean way to organize related business logic.
+- User-defined exceptions make the code more readable and allow business rules to be handled explicitly.
+- After a long gap, I realized my PL/SQL skills had become rusty. The concepts are familiar, but rebuilding confidence comes from writing code consistently.
+- Most importantly, I reminded myself **not to overcomplicate the solution**. Building one small, working feature at a time is far more effective than trying to solve everything at once.
+
+### Next Steps
+
+- Add more banking operations to the package, starting with **Deposit**, **Withdrawal**, and **Fund Transfer** procedures.
+- Strengthen exception handling and transaction management.
+- Continue building the package incrementally while keeping the code simple, readable, and testable.
