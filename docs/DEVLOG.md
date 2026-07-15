@@ -121,3 +121,10 @@ It was a simple issue, but an important lesson in understanding how different SQ
 - Add more banking operations to the package, starting with **Deposit**, **Withdrawal**, and **Fund Transfer** procedures.
 - Strengthen exception handling and transaction management.
 - Continue building the package incrementally while keeping the code simple, readable, and testable.
+
+### Interview Takeaway
+
+If an interviewer asked me about today's work, I would say:
+
+> "As part of rebuilding my PL/SQL skills, I implemented a **Check Balance** function within a PL/SQL package. The function includes business validation using a user-defined exception to prevent inactive accounts from retrieving their balance. During development, I encountered package compilation issues related to how my SQL client executed PL/SQL scripts. After diagnosing the root cause, I corrected the issue and successfully compiled the package. This exercise reinforced not only my PL/SQL programming skills but also the importance of understanding how development tools handle script execution."
+  
