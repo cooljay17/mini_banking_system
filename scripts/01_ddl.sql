@@ -74,12 +74,13 @@ Last_modified_at DATE
 ALTER TABLE TXN_LOG MODIFY created_at DEFAULT SYSDATE;
 ALTER TABLE TXN_LOG MODIFY txn_type VARCHAR2(50);
 ALTER TABLE TXN_LOG MODIFY txn_type DEFAULT NULL;
-ALTER TABLE TXN_LOG DROP CONSTRAINT SYS_C008578;
+ALTER TABLE TXN_LOG DROP CONSTRAINT SYS_C008589;
 ALTER TABLE TXN_LOG MODIFY  CHECK(txn_type IN('DEPOSIT','WITHDRAWAL','FUND TRANSFER','INTEREST CREDIT',
-'ATM WITHDRAWAL','UPI','NEFT','IMPS'));
+'ATM WITHDRAWAL','UPI','NEFT','IMPS','CASH'));
+ALTER TABLE TXN_LOG DROP CONSTRAINT SYS_C008581;--Removed foreign key constraint from from account_id
 
 
-/*
+
 --Sequences: seq_account_id, seq_txn_id to generate keys.
 CREATE SEQUENCE seq_account_id
 START WITH
@@ -88,7 +89,7 @@ START WITH
 CREATE SEQUENCE seq_txn_id
 START WITH
 1 INCREMENT BY 1;
-*/
+
 --Optional index on txn_log.from_acct_id, txn_log.to_acct_id for quick history.
 CREATE INDEX idx_from_acct_id
 ON
