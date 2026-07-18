@@ -128,3 +128,42 @@ If an interviewer asked me about today's work, I would say:
 
 > "As part of rebuilding my PL/SQL skills, I implemented a **Check Balance** function within a PL/SQL package. The function includes business validation using a user-defined exception to prevent inactive accounts from retrieving their balance. During development, I encountered package compilation issues related to how my SQL client executed PL/SQL scripts. After diagnosing the root cause, I corrected the issue and successfully compiled the package. This exercise reinforced not only my PL/SQL programming skills but also the importance of understanding how development tools handle script execution."
   
+
+## Day 5
+
+### Accomplishments
+
+- Successfully implemented my first PL/SQL procedure.
+- Reused the **Check Account Balance** function created earlier instead of duplicating the validation logic, improving code reusability and maintainability.
+- Extended the **TXN_LOG** table by introducing a new transaction type: **CASH**.
+- Reviewed the table design and modified the foreign key constraints on the transaction log to better align with the application's business requirements.
+
+### Challenge
+
+While implementing the procedure, I realized that the existing design of the **TXN_LOG** table did not fully support all transaction scenarios.
+
+Initially, both **FROM_ACCOUNT_ID** and **TO_ACCOUNT_ID** were defined as foreign keys referencing the **ACCOUNT** table. However, for certain transaction types (such as cash transactions), the source or destination account may not always correspond to a valid account record. This caused unnecessary validation failures.
+
+To accommodate these business scenarios, I removed the constraint that no longer fit the evolving design.
+
+This reinforced an important lesson: **database design evolves as business requirements become clearer**.
+
+### What I Learned
+
+- Reuse existing functions instead of repeating the same validation logic.
+- Database constraints should support business rules rather than restrict valid business scenarios.
+- It is a good practice to assign meaningful names to constraints instead of relying on system-generated names, making future maintenance and schema modifications much easier.
+- Database design is iterative. As application logic evolves, the schema should evolve with it.
+
+### Next Steps
+
+- Continue implementing the remaining banking procedures.
+- Enhance exception handling and transaction logging.
+- Review the database schema regularly to ensure it aligns with business requirements.
+
+
+### Interview Takeaway
+
+If an interviewer asked me about today's work, I would say:
+
+> "Today I implemented a PL/SQL procedure while following the principle of code reusability by leveraging an existing account validation function instead of duplicating the logic. During development, I extended the transaction log to support a new **CASH** transaction type and revisited the database design. I realized that one of the foreign key constraints did not align with all business scenarios, so I modified the schema accordingly. This experience reinforced two key lessons: always assign meaningful names to database constraints for easier maintenance, and remember that database design is iterative—it should evolve alongside changing business requirements."
