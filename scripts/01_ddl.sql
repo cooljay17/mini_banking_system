@@ -90,6 +90,8 @@ CREATE SEQUENCE seq_txn_id
 START WITH
 1 INCREMENT BY 1;
 
+ALTER SEQUENCE seq_txn_id RESTART START WITH 10001;
+
 --Optional index on txn_log.from_acct_id, txn_log.to_acct_id for quick history.
 CREATE INDEX idx_from_acct_id
 ON
@@ -98,3 +100,4 @@ txn_log (from_acct_id);
 CREATE INDEX idx_to_acct_id
 ON
 txn_log (to_acct_id);
+
