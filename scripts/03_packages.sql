@@ -1,3 +1,19 @@
+CREATE OR REPLACE PACKAGE BTMS.pkg_banking_system AS    
+
+  FUNCTION get_account_balance (
+    p_account_id IN account.account_id%TYPE
+  ) RETURN NUMBER;
+
+  PROCEDURE deposit_money (
+    p_from_account_id IN VARCHAR2 DEFAULT NULL,
+    p_to_account_id   IN account.account_id%TYPE,
+    p_txn_channel     IN txn_log.txn_channel%TYPE,
+    p_amount          IN NUMBER
+  );
+
+END pkg_banking_system;
+
+
 CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
 
   ------------------------------------------------------------------------------
@@ -39,7 +55,7 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
   -- PROCEDURE: deposit_money
   ------------------------------------------------------------------------------
   PROCEDURE deposit_money (
-    p_from_account_id IN VARCHAR2 DEFAULT NULL,
+    p_from_account_id IN VARCHAR2,
     p_to_account_id   IN account.account_id%TYPE,
     p_txn_channel     IN txn_log.txn_channel%TYPE,
     p_amount          IN NUMBER
@@ -47,16 +63,26 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
     v_chk_balance                 NUMBER := 0;
     v_balance                     NUMBER := 0;
     v_txn_type                    VARCHAR2(10) := 'DEPOSIT';
+  	v_is_from_acct_null			  BOOLEAN      := TRUE;
+ 
 
     zero_deposit_amount           EXCEPTION;
     inactive_account              EXCEPTION;
+    empty_from_account_id             EXCEPTION;
     e_check_constraint_violation  EXCEPTION;
 
     PRAGMA EXCEPTION_INIT(e_check_constraint_violation, -2290);
-  BEGIN
+    
+  BEGIN	  
+	
+    IF p_txn_channel <> 'CASH' AND  p_from_account_id IS  NULL THEN
+           	v_is_from_acct_null:=FALSE;            
+    END IF;
+   
+    
     v_chk_balance := get_account_balance(p_to_account_id);
 
-    IF v_chk_balance IS NOT NULL AND p_amount > 0 THEN
+    IF v_chk_balance IS NOT NULL AND p_amount > 0 AND v_is_from_acct_null THEN
       
       -- Transaction Phase 1: Lock the source row and update
       BEGIN
@@ -70,6 +96,7 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
            SET balance          = v_balance + p_amount,
                last_modified_at = SYSDATE
          WHERE account_id = p_to_account_id;
+        DBMS_OUTPUT.PUT_LINE('Deposit::Account ID ' || p_to_account_id || ' updated with new balance successfully');
 
         INSERT INTO txn_log (
           txn_id,
@@ -90,7 +117,7 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
           v_chk_balance + p_amount,
           SYSDATE
         );
-
+		DBMS_OUTPUT.PUT_LINE('Deposit::Transaction log Record inserted for Account ID ' || p_to_account_id || ' updated with new balance successfully');
         COMMIT;
 
       EXCEPTION
@@ -100,8 +127,7 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
       END;
 
     ELSIF p_amount <= 0 THEN
-	BEGIN
-      INSERT INTO txn_log (
+	  INSERT INTO txn_log (
         txn_id,
         from_acct_id,
         to_acct_id,
@@ -125,14 +151,35 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
 
       COMMIT;
       RAISE zero_deposit_amount;
-      EXCEPTION
-        WHEN OTHERS THEN
-          ROLLBACK;  
-          RAISE;
-	END;
+      
+    ELSIF v_is_from_acct_null=FALSE THEN
+	  INSERT INTO txn_log (
+        txn_id,
+        from_acct_id,
+        to_acct_id,
+        txn_type,
+        txn_channel,
+        status,
+        error_msg,
+        amount,
+        created_at
+      ) VALUES (
+        seq_txn_id.NEXTVAL,
+        p_from_account_id,
+        p_to_account_id,
+        v_txn_type,
+        p_txn_channel,
+        'FAILED',
+        'From account is null and transaction channel is not cash',
+        p_amount,
+        SYSDATE
+      );
+
+      COMMIT;
+      RAISE empty_from_account_id;  
+    
     ELSE
-	BEGIN
-      INSERT INTO txn_log (
+	  INSERT INTO txn_log (
         txn_id,
         from_acct_id,
         to_acct_id,
@@ -156,13 +203,7 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
 
       COMMIT;
       RAISE inactive_account;
-             
-      EXCEPTION
-        WHEN OTHERS THEN
-          ROLLBACK;  -- Undoes transaction if lock/update fails
-          RAISE;
-    END;  
-    END IF;
+  END IF;
 
   EXCEPTION
     WHEN NO_DATA_FOUND THEN
@@ -173,6 +214,9 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
 
     WHEN zero_deposit_amount THEN
       DBMS_OUTPUT.PUT_LINE('Error: Deposit amount must be greater than zero.');
+    
+    WHEN empty_from_account_id THEN
+      DBMS_OUTPUT.PUT_LINE('Error: From Account ID is NULL for the Transaction channel which is not CASH');
 
     WHEN e_check_constraint_violation THEN
       DBMS_OUTPUT.PUT_LINE('Data integrity failure: Value violates table check rules.');
