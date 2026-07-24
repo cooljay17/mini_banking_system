@@ -167,3 +167,51 @@ This reinforced an important lesson: **database design evolves as business requi
 If an interviewer asked me about today's work, I would say:
 
 > "Today I implemented a PL/SQL procedure while following the principle of code reusability by leveraging an existing account validation function instead of duplicating the logic. During development, I extended the transaction log to support a new **CASH** transaction type and revisited the database design. I realized that one of the foreign key constraints did not align with all business scenarios, so I modified the schema accordingly. This experience reinforced two key lessons: always assign meaningful names to database constraints for easier maintenance, and remember that database design is iterative—it should evolve alongside changing business requirements."
+
+## Day 6, 7 & 8
+
+### Accomplishments
+
+Over the past three days, I focused on **refactoring and enhancing** the `deposit_money` procedure. What started as a basic implementation gradually evolved into a more robust and business-oriented solution.
+
+Key improvements include:
+
+- **Restructured the `deposit_money` procedure** to improve readability, maintainability, and business validation.
+- Redesigned the **TXN_LOG** table by separating transaction classification into two columns:
+  - **TXN_TYPE** – Stores the business operation (`DEPOSIT`, `WITHDRAW`, `TRANSFER`).
+  - **TXN_CHANNEL** – Stores the transaction channel (`CASH`, `NEFT`, `UPI`, `ATM`, `INTERNET BANKING`, etc.).
+- Added several **custom exceptions** to handle business validation scenarios with meaningful error messages.
+- Used **`PRAGMA EXCEPTION_INIT`** to map Oracle error codes to named exceptions, allowing database constraint violations (such as `CHECK` constraints) to be handled more gracefully.
+- Implemented business logic to ensure:
+  - **FROM_ACCOUNT_ID** is mandatory for all non-cash transactions.
+  - For **CASH** deposits, **FROM_ACCOUNT_ID** can be `NULL`.
+- Created comprehensive **PL/SQL anonymous block test cases** covering both successful transactions and various failure scenarios.
+
+### Challenge
+
+As the business rules became more detailed, I realized that the original implementation was too simplistic. Instead of continuously patching the procedure, I decided to restructure it to better separate validation logic from business processing.
+
+Another challenge was handling Oracle constraint violations in a user-friendly way. Rather than displaying generic Oracle errors, I explored exception mapping using `PRAGMA EXCEPTION_INIT`, which made the error handling much cleaner.
+
+### What I Learned
+
+- Business requirements evolve, and PL/SQL procedures should be refactored as new rules emerge rather than continually patched.
+- Separating **Transaction Type** from **Transaction Channel** results in a cleaner and more extensible data model.
+- `PRAGMA EXCEPTION_INIT` is a powerful feature for converting Oracle error codes into meaningful, named exceptions that improve readability and maintainability.
+- Comprehensive testing using PL/SQL anonymous blocks is essential to validate both positive and negative scenarios.
+- A valuable PL/SQL design principle I learned is that **default parameter values should be declared only in the Package Specification (Header), not in the Package Body**. Oracle enforces this rule to maintain a single public interface and ensure consistency between the package specification and implementation.
+
+### Next Steps
+
+- Implement the **Withdrawal** procedure using the same design principles.
+- Reuse common validation logic wherever possible.
+- Continue expanding test coverage for all banking operations.
+- Refactor shared business validations into reusable package components where appropriate.
+
+---
+
+### Interview Takeaway
+
+If an interviewer asked me about today's work, I would say:
+
+> "Over the past few days, I refactored my `deposit_money` procedure to make it more aligned with real-world banking requirements. I redesigned the transaction log by separating business operations (`DEPOSIT`, `WITHDRAW`, `TRANSFER`) from transaction channels (`CASH`, `UPI`, `NEFT`, etc.), making the data model more scalable. I introduced several custom exceptions and used `PRAGMA EXCEPTION_INIT` to map Oracle constraint violations to named exceptions, enabling cleaner and more maintainable error handling. I also implemented conditional business validations, such as allowing a `NULL` source account only for cash deposits, and created comprehensive PL/SQL anonymous block test cases for both success and failure scenarios. Another important lesson was understanding Oracle's package design rule that default parameter values belong only in the Package Specification, reinforcing the separation between a package's public interface and its implementation."
