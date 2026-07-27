@@ -1,4 +1,7 @@
 SET SERVEROUTPUT ON;
+-------------------------------------------------------
+----Deposit_money----
+------------------------------------------------------
 --Success criteria
 BEGIN
     pkg_banking_system.deposit_money(
@@ -38,5 +41,73 @@ BEGIN
         p_to_account_id   => 675,
         p_txn_channel      => 'NEFT',
         p_amount          => -900
+    );
+END;
+-------------------------------------------------------
+----Withdraw_money----
+------------------------------------------------------
+--Success criteria
+BEGIN
+    pkg_banking_system.withdraw_money(
+        p_from_account_id => 501,
+        p_to_account_id   => NULL,
+        p_txn_channel        => 'CASH', 
+        p_amount          => 2000
+    );
+    
+END;
+
+--Failure-To account null other than CASH
+BEGIN
+    pkg_banking_system.withdraw_money(
+        p_from_account_id => 501,
+        p_to_account_id   => NULL,
+        p_txn_channel        => 'NEFT', 
+        p_amount          => 2000
+    );
+    
+END;
+
+--Failure-Check constraint check
+BEGIN
+    pkg_banking_system.withdraw_money(
+        p_from_account_id => 501,
+        p_to_account_id   => 987605,
+        p_txn_channel        => 'WITHDRAW', 
+        p_amount          => 2000
+    );
+    
+END;
+
+
+--Failure-Higher withdrwal amount
+BEGIN
+    pkg_banking_system.withdraw_money(
+        p_from_account_id => 501,
+        p_to_account_id   => '77789890790',
+        p_txn_channel      => 'NEFT',
+        p_amount          => 1624000
+    );
+END;
+
+
+--Failure-Zero/negative withdrwal amount
+BEGIN
+    pkg_banking_system.withdraw_money(
+        p_from_account_id => 501,
+        p_to_account_id   => '77789890790',
+        p_txn_channel      => 'NEFT',
+        p_amount          => 0
+    );
+END;
+
+
+--Failure-Account Blocked
+BEGIN
+    pkg_banking_system.withdraw_money(
+        p_from_account_id => 499,
+        p_to_account_id   => '77789890790',
+        p_txn_channel      => 'NEFT',
+        p_amount          => 277500
     );
 END;
