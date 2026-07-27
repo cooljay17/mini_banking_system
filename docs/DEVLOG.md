@@ -215,3 +215,43 @@ Another challenge was handling Oracle constraint violations in a user-friendly w
 If an interviewer asked me about today's work, I would say:
 
 > "I refactored my Deposit Money procedure to better reflect real-world banking requirements. I redesigned the transaction log by separating transaction type from transaction channel, making the model more scalable. I implemented business validations, custom exceptions, and used PRAGMA EXCEPTION_INIT to translate Oracle constraint violations into meaningful errors. I also created comprehensive PL/SQL test cases covering both successful and failure scenarios and learned several package design best practices while refining the implementation."
+
+## Day 9
+
+### Accomplishments
+
+- Successfully completed the **`withdraw_money`** procedure.
+- Reused the common validation logic developed in earlier procedures, ensuring consistency across the package.
+- Reviewed and refined the **TXN_LOG** table design based on the withdrawal business process.
+- Removed the foreign key constraint on **TO_ACCOUNT_ID** from the **TXN_LOG** table.
+
+### Challenge
+
+While implementing the withdrawal procedure, I realized that the original database design assumed every transaction would involve a valid destination account.
+
+However, this assumption does not hold true for all business scenarios. In a withdrawal transaction, the money may leave the banking system (for example, cash withdrawal), so **TO_ACCOUNT_ID** does not always correspond to an account in the database.
+
+Keeping the foreign key constraint would unnecessarily restrict valid business operations, so I removed it to better align the schema with real-world banking requirements.
+
+I also reviewed the existing indexes on **FROM_ACCOUNT_ID** and **TO_ACCOUNT_ID** and removed them after determining they were no longer beneficial for the revised design and current query patterns.
+
+### What I Learned
+
+- Database constraints should support genuine business rules rather than enforce assumptions that may not apply to every transaction.
+- Indexes should be created based on actual query requirements, not simply because a column is frequently referenced.
+- As business processes become clearer, the database schema should be revisited and refined instead of remaining fixed.
+- Building reusable validation logic across procedures makes the package easier to maintain and extend.
+
+### Next Steps
+
+- Implement the **Transfer Money** procedure.
+- Consolidate common validations into reusable package components wherever possible.
+- Perform end-to-end testing of Deposit, Withdrawal, and Transfer scenarios.
+
+---
+
+### Interview Takeaway
+
+If an interviewer asked me about today's work, I would say:
+
+> "Today I completed the `withdraw_money` procedure and refined the underlying database design to better support real-world banking scenarios. During implementation, I realized that a withdrawal transaction does not always have a valid destination account, so I removed the foreign key constraint on `TO_ACCOUNT_ID` in the transaction log. I also reviewed and removed indexes that no longer provided value based on the updated access patterns. This experience reinforced that database design is iterative—constraints and indexes should always reflect business requirements and actual application usage rather than initial assumptions."
