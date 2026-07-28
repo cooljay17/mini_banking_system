@@ -1,8 +1,15 @@
 CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
 
   ------------------------------------------------------------------------------
-  -- FUNCTION: get_account_balance
-  ------------------------------------------------------------------------------
+-- FUNCTION: get_account_balance
+-- Purpose :
+--   Returns the current balance for an ACTIVE account.
+--
+-- Business Rules:
+--   • Account must exist.
+--   • Account must be ACTIVE.
+--   • Returns NULL for invalid or blocked accounts.
+------------------------------------------------------------------------------
   FUNCTION get_account_balance (
     p_account_id IN account.account_id%TYPE
   ) RETURN NUMBER IS
@@ -23,21 +30,31 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
 
   EXCEPTION
     WHEN NO_DATA_FOUND THEN
-      DBMS_OUTPUT.PUT_LINE('Error: Account ID ' || p_account_id || ' does not exist.');
+      DBMS_OUTPUT.PUT_LINE('get_account_balance::Error: Account ID ' || p_account_id || ' does not exist.');
       RETURN NULL;
 
     WHEN inactive_account THEN
-      DBMS_OUTPUT.PUT_LINE('Error: Account ID ' || p_account_id || ' is blocked/inactive.');
+      DBMS_OUTPUT.PUT_LINE('get_account_balance::Error: Account ID ' || p_account_id || ' is blocked/inactive.');
       RETURN NULL;
 
     WHEN OTHERS THEN
-      DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
+      DBMS_OUTPUT.PUT_LINE('get_account_balance::Error:An unexpected error occurred: ' || SQLERRM);
       RETURN NULL;
   END get_account_balance;
 
   ------------------------------------------------------------------------------
-  -- PROCEDURE: deposit_money
-  ------------------------------------------------------------------------------
+-- PROCEDURE: deposit_money
+--
+-- Purpose:
+--   Deposits money into a customer account.
+--
+-- Business Rules:
+--   • Deposit amount must be greater than zero.
+--   • Destination account must be ACTIVE.
+--   • FROM_ACCOUNT is mandatory for non-CASH deposits.
+--   • Every successful or failed transaction is recorded in TXN_LOG.
+--   • Account row is locked during update to prevent concurrent modifications.
+------------------------------------------------------------------------------
   PROCEDURE deposit_money (
     p_from_account_id IN VARCHAR2,
 	p_to_account_id   IN account.account_id%TYPE,
@@ -191,29 +208,40 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
 
   EXCEPTION
     WHEN NO_DATA_FOUND THEN
-      DBMS_OUTPUT.PUT_LINE('Error: Account ID ' || p_to_account_id || ' does not exist.');
+      DBMS_OUTPUT.PUT_LINE('Deposit_Money::Error: Account ID ' || p_to_account_id || ' does not exist.');
 
     WHEN inactive_account THEN
-      DBMS_OUTPUT.PUT_LINE('Error: Account ID ' || p_to_account_id || ' is blocked/inactive.');
+      DBMS_OUTPUT.PUT_LINE('Deposit_Money::Error: Account ID ' || p_to_account_id || ' is blocked/inactive.');
 
     WHEN zero_deposit_amount THEN
-      DBMS_OUTPUT.PUT_LINE('Error: Deposit amount must be greater than zero.');
+      DBMS_OUTPUT.PUT_LINE('Deposit_Money::Error: Deposit amount must be greater than zero.');
     
     WHEN empty_from_account_id THEN
-      DBMS_OUTPUT.PUT_LINE('Error: From Account ID is NULL for the Transaction channel which is not CASH');
+      DBMS_OUTPUT.PUT_LINE('Deposit_Money::Error: From Account ID is NULL for the Transaction channel which is not CASH');
 
     WHEN e_check_constraint_violation THEN
-      DBMS_OUTPUT.PUT_LINE('Data integrity failure: Value violates table check rules.');
-      DBMS_OUTPUT.PUT_LINE('Technical error details: ' || SQLERRM);
+      DBMS_OUTPUT.PUT_LINE('Deposit_Money::Error:Data integrity failure: Value violates table check rules.');
+      DBMS_OUTPUT.PUT_LINE('Deposit_Money::Error:Technical error details: ' || SQLERRM);
 
     WHEN OTHERS THEN
-      DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
+      DBMS_OUTPUT.PUT_LINE('Deposit_Money::Error:An unexpected error occurred: ' || SQLERRM);
 
   END deposit_money;
   
   ------------------------------------------------------------------------------
-  -- PROCEDURE: withdraw_money
-  ------------------------------------------------------------------------------
+-- PROCEDURE: withdraw_money
+--
+-- Purpose:
+--   Withdraws money from an account.
+--
+-- Business Rules:
+--   • Source account must be ACTIVE.
+--   • Account must have sufficient balance.
+--   • Withdrawal amount must be greater than zero.
+--   • TO_ACCOUNT is mandatory for non-CASH withdrawals.
+--   • Every successful or failed transaction is recorded.
+--   • Account row is locked before balance update.
+------------------------------------------------------------------------------
   PROCEDURE withdraw_money (
 	p_from_account_id IN account.account_id%TYPE,
 	p_to_account_id   IN VARCHAR2,
@@ -423,29 +451,29 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
 
   EXCEPTION
     WHEN NO_DATA_FOUND THEN
-      DBMS_OUTPUT.PUT_LINE('Error: Account ID ' || p_from_account_id || ' does not exist.');
+      DBMS_OUTPUT.PUT_LINE('Withdraw_Money::Error: Account ID ' || p_from_account_id || ' does not exist.');
 
     WHEN inactive_account THEN
-      DBMS_OUTPUT.PUT_LINE('Error: Account ID ' || p_from_account_id || ' is blocked/inactive.');
+      DBMS_OUTPUT.PUT_LINE('Withdraw_Money::Error: Account ID ' || p_from_account_id || ' is blocked/inactive.');
 
     WHEN zero_account_balance THEN
-      DBMS_OUTPUT.PUT_LINE('Error: Account Balance is zero or below');
+      DBMS_OUTPUT.PUT_LINE('Withdraw_Money::Error: Account Balance is zero or below');
 	  
 	WHEN zero_withdrawal_amount THEN
-      DBMS_OUTPUT.PUT_LINE('Error: Withdrawal amount must be greater than zero.');
+      DBMS_OUTPUT.PUT_LINE('Withdraw_Money::Error: Withdrawal amount must be greater than zero.');
 	
 	WHEN withdrawal_amt_exceeding_balance THEN
-      DBMS_OUTPUT.PUT_LINE('Error: Withdrawal Amount is exceeding Account Balance.');
+      DBMS_OUTPUT.PUT_LINE('Withdraw_Money::Error: Withdrawal Amount is exceeding Account Balance.');
     
     WHEN empty_to_account_id THEN
-      DBMS_OUTPUT.PUT_LINE('Error: To Account ID is NULL for the Transaction channel which is not CASH');
+      DBMS_OUTPUT.PUT_LINE('Withdraw_Money::Error: To Account ID is NULL for the Transaction channel which is not CASH');
 
     WHEN e_check_constraint_violation THEN
-      DBMS_OUTPUT.PUT_LINE('Data integrity failure: Value violates table check rules.');
-      DBMS_OUTPUT.PUT_LINE('Technical error details: ' || SQLERRM);
+      DBMS_OUTPUT.PUT_LINE('Withdraw_Money::Error:Data integrity failure: Value violates table check rules.');
+      DBMS_OUTPUT.PUT_LINE('Withdraw_Money::Error:Technical error details: ' || SQLERRM);
 
     WHEN OTHERS THEN
-      DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
+      DBMS_OUTPUT.PUT_LINE('Withdraw_Money::Error:An unexpected error occurred: ' || SQLERRM);
 
   END withdraw_money;
 
