@@ -255,3 +255,82 @@ I also reviewed the existing indexes on **FROM_ACCOUNT_ID** and **TO_ACCOUNT_ID*
 If an interviewer asked me about today's work, I would say:
 
 > "Today I completed the `withdraw_money` procedure and refined the underlying database design to better support real-world banking scenarios. During implementation, I realized that a withdrawal transaction does not always have a valid destination account, so I removed the foreign key constraint on `TO_ACCOUNT_ID` in the transaction log. I also reviewed and removed indexes that no longer provided value based on the updated access patterns. This experience reinforced that database design is iterative—constraints and indexes should always reflect business requirements and actual application usage rather than initial assumptions."
+
+## Day 10
+
+### Accomplishments
+
+- Investigated and resolved an Oracle database connectivity issue between **DBeaver** and the local Oracle database.
+- Diagnosed the root cause of the connection failure instead of simply restarting the database.
+- Successfully restarted the Oracle instance and verified that the **FREEPDB1** pluggable database was available and opened in **READ WRITE** mode.
+
+### Challenge
+
+While connecting from DBeaver, I encountered the following error:
+
+```text
+ORA-12514: Cannot connect to database.
+Service FREEPDB1 is not registered with the listener.
+```
+
+To troubleshoot, I connected using SQL*Plus:
+
+```sql
+sqlplus / as sysdba
+```
+
+When I attempted to list the pluggable databases:
+
+```sql
+SHOW PDBS;
+```
+
+I received:
+
+```text
+ORA-01034: Oracle instance is not available.
+```
+
+This indicated that the Oracle database instance itself was not running.
+
+I started the database using:
+
+```sql
+STARTUP;
+```
+
+After the instance started successfully, I verified the pluggable databases:
+
+```sql
+SHOW PDBS;
+```
+
+Output:
+
+```text
+FREEPDB1   READ WRITE
+```
+
+Once the database was running and the PDB was open, DBeaver connected successfully.
+
+### What I Learned
+
+- `ORA-12514` does not always indicate a listener configuration problem. It can also occur when the database instance or pluggable database is not running.
+- Before troubleshooting client tools like DBeaver, verify the database status using SQL*Plus.
+- Understanding the Oracle startup sequence (Instance → Database → Pluggable Database) is essential for diagnosing connectivity issues.
+- Learning basic Oracle administration skills is valuable even when primarily working as a PL/SQL developer.
+
+### Next Steps
+
+- Learn common Oracle startup and shutdown commands.
+- Explore listener diagnostics using `lsnrctl status`.
+- Continue implementing the remaining PL/SQL banking procedures.
+
+---
+
+### Interview Takeaway
+
+If an interviewer asked me about today's work, I would say:
+
+> "Today I diagnosed and resolved an Oracle database connectivity issue while connecting from DBeaver. The application reported an `ORA-12514` error, but instead of assuming it was a listener problem, I verified the database status using SQL*Plus. I discovered that the Oracle instance was not running (`ORA-01034`), started the database using the `STARTUP` command, confirmed that the `FREEPDB1` pluggable database was open in `READ WRITE` mode, and successfully restored connectivity. This experience strengthened my troubleshooting approach by emphasizing the importance of verifying the database instance before investigating client or listener configuration issues."
+
