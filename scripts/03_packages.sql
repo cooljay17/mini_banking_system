@@ -1,3 +1,36 @@
+------------------------------------------------------------------------------
+-- Package Name : PKG_BANKING_SYSTEM
+-- Purpose      : Implements core banking operations.
+--                1. Get Account Balance
+--                2. Deposit Money
+--                3. Withdraw Money
+--
+-- Author       : Jayanthi Manickam Sethu
+
+------------------------------------------------------------------------------
+CREATE OR REPLACE PACKAGE BTMS.pkg_banking_system AS    
+
+  FUNCTION get_account_balance (
+    p_account_id IN account.account_id%TYPE
+  ) RETURN NUMBER;
+
+  PROCEDURE deposit_money (
+    p_from_account_id IN VARCHAR2 DEFAULT NULL,
+	p_to_account_id   IN account.account_id%TYPE,
+    p_txn_channel     IN txn_log.txn_channel%TYPE,
+    p_amount          IN NUMBER
+  );
+  
+  PROCEDURE withdraw_money (
+	p_from_account_id IN account.account_id%TYPE,
+	p_to_account_id   IN VARCHAR2 DEFAULT NULL,
+	p_txn_channel     IN txn_log.txn_channel%TYPE,
+	p_amount          IN NUMBER
+	);
+
+END pkg_banking_system;
+
+
 CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
 
   ------------------------------------------------------------------------------
