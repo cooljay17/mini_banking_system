@@ -27,6 +27,13 @@ CREATE OR REPLACE PACKAGE BTMS.pkg_banking_system AS
 	p_txn_channel     IN txn_log.txn_channel%TYPE,
 	p_amount          IN NUMBER
 	);
+	
+  PROCEDURE internal_transfer_money (
+	p_from_account_id IN account.account_id%TYPE,
+	p_to_account_id   IN account.account_id%TYPE,
+	p_txn_channel     IN txn_log.txn_channel%TYPE,
+	p_amount          IN NUMBER
+	);
 
 END pkg_banking_system;
 
@@ -509,5 +516,320 @@ CREATE OR REPLACE PACKAGE BODY BTMS.pkg_banking_system AS
       DBMS_OUTPUT.PUT_LINE('Withdraw_Money::Error:An unexpected error occurred: ' || SQLERRM);
 
   END withdraw_money;
+  
+    ------------------------------------------------------------------------------
+-- PROCEDURE: internal_transfer_money
+--
+-- Purpose:
+--   Transfers money from one account to another
+--
+-- Business Rules:
+--   • Source account and destination account must be ACTIVE.
+--   • Source Account must have sufficient balance.
+--   • Transfer amount must be greater than zero.
+--   • Every successful or failed transaction is recorded.
+--   • Account row is locked before balance update.
+------------------------------------------------------------------------------
+  PROCEDURE internal_transfer_money (
+	p_from_account_id IN account.account_id%TYPE,
+	p_to_account_id   IN account.account_id%TYPE,
+	p_txn_channel     IN txn_log.txn_channel%TYPE,
+	p_amount          IN NUMBER
+	) 
+	
+	IS
+    v_chk_balance_from_acct       NUMBER := 0;
+	v_chk_balance_to_acct         NUMBER := 0;
+    v_balance                     NUMBER := 0;
+    v_txn_type  CONSTANT          txn_log.txn_type%TYPE := 'TRANSFER';
+  	
+	
+ 
+	same_account_transfer          EXCEPTION;
+    zero_from_account_balance      EXCEPTION;
+	zero_transfer_amount           EXCEPTION;
+    transfer_amt_exceeding_balance EXCEPTION;
+    inactive_from_account          EXCEPTION;
+	inactive_to_account            EXCEPTION;    
+    e_check_constraint_violation   EXCEPTION;
+
+    PRAGMA EXCEPTION_INIT(e_check_constraint_violation, -2290);
+    
+  BEGIN	  
+	
+      
+    v_chk_balance_from_acct := get_account_balance(p_from_account_id);
+
+    IF v_chk_balance_from_acct IS NULL THEN
+    	INSERT INTO txn_log (
+        txn_id,
+        from_acct_id,
+        to_acct_id,
+        txn_type,
+        txn_channel,
+        status,
+        error_msg,
+        amount,
+        created_at
+      ) VALUES (
+        seq_txn_id.NEXTVAL,
+        p_from_account_id,
+        p_to_account_id,
+        v_txn_type,
+        p_txn_channel,
+        'FAILED',
+        'Blocked/inactive from account',
+        0,
+        SYSDATE
+      );
+
+      COMMIT;
+      RAISE inactive_from_account;
+	END IF;  
+	
+   
+    v_chk_balance_to_acct := get_account_balance(p_to_account_id);  	
+	
+	IF v_chk_balance_to_acct IS NULL THEN
+    	INSERT INTO txn_log (
+        txn_id,
+        from_acct_id,
+        to_acct_id,
+        txn_type,
+        txn_channel,
+        status,
+        error_msg,
+        amount,
+        created_at
+      ) VALUES (
+        seq_txn_id.NEXTVAL,
+        p_from_account_id,
+        p_to_account_id,
+        v_txn_type,
+        p_txn_channel,
+        'FAILED',
+        'Blocked/inactive To account',
+        0,
+        SYSDATE
+      );
+
+      COMMIT;
+      RAISE inactive_to_account;  
+    END IF;
+      
+    IF v_chk_balance_from_acct <= 0 THEN
+	  INSERT INTO txn_log (
+        txn_id,
+        from_acct_id,
+        to_acct_id,
+        txn_type,
+        txn_channel,
+        status,
+        error_msg,
+        amount,
+        created_at
+      ) VALUES (
+        seq_txn_id.NEXTVAL,
+        p_from_account_id,
+        p_to_account_id,
+        v_txn_type,
+        p_txn_channel,
+        'FAILED',
+        'Zero/Negative From Account Balance',
+        p_amount,
+        SYSDATE
+      );
+
+      COMMIT;
+      RAISE zero_from_account_balance;    
+	  
+	ELSIF p_amount <= 0 THEN
+	  INSERT INTO txn_log (
+        txn_id,
+        from_acct_id,
+        to_acct_id,
+        txn_type,
+        txn_channel,
+        status,
+        error_msg,
+        amount,
+        created_at
+      ) VALUES (
+        seq_txn_id.NEXTVAL,
+        p_from_account_id,
+        p_to_account_id,
+        v_txn_type,
+        p_txn_channel,
+        'FAILED',
+        'Zero/Negative Transfer Amount',
+        p_amount,
+        SYSDATE
+      );
+
+      COMMIT;
+      RAISE zero_transfer_amount;
+	  
+    ELSIF p_amount > v_chk_balance_from_acct THEN
+	  INSERT INTO txn_log (
+        txn_id,
+        from_acct_id,
+        to_acct_id,
+        txn_type,
+        txn_channel,
+        status,
+        error_msg,
+        amount,
+        created_at
+      ) VALUES (
+        seq_txn_id.NEXTVAL,
+        p_from_account_id,
+        p_to_account_id,
+        v_txn_type,
+        p_txn_channel,
+        'FAILED',
+        'Withdrawal Amount is exceeding Account Balance',
+        p_amount,
+        SYSDATE
+      );
+
+      COMMIT;
+      RAISE transfer_amt_exceeding_balance;
+      
+    ELSIF p_from_account_id=p_to_account_id THEN
+	  INSERT INTO txn_log (
+        txn_id,
+        from_acct_id,
+        to_acct_id,
+        txn_type,
+        txn_channel,
+        status,
+        error_msg,
+        amount,
+        created_at
+      ) VALUES (
+        seq_txn_id.NEXTVAL,
+        p_from_account_id,
+        p_to_account_id,
+        v_txn_type,
+        p_txn_channel,
+        'FAILED',
+        'Both source and destinatination accounts are same',
+        p_amount,
+        SYSDATE
+      );
+
+      COMMIT;
+      RAISE same_account_transfer;  
+    
+    ELSE 
+      -- Transaction Phase 1: Lock the source row and update
+      BEGIN
+	   SELECT balance
+          INTO v_balance
+          FROM account
+         WHERE account_id = p_from_account_id 
+           FOR UPDATE;  -- Explicit source account row lock
+           
+       SELECT balance
+          INTO v_balance
+          FROM account
+         WHERE account_id = p_to_account_id 
+           FOR UPDATE;  -- Explicit destination account row lock    
+
+        UPDATE account
+           SET balance          = v_balance - p_amount,
+               last_modified_at = SYSDATE
+         WHERE account_id = p_from_account_id;
+       -- DBMS_OUTPUT.PUT_LINE('Transfer::From Account ID: ' || p_from_account_id || ' money debited successfully');
+		
+		UPDATE account
+           SET balance          = v_balance + p_amount,
+               last_modified_at = SYSDATE
+         WHERE account_id = p_to_account_id;
+        --DBMS_OUTPUT.PUT_LINE('Transfer::To Account ID: ' || p_to_account_id || ' money credited successfully');
+		DBMS_OUTPUT.PUT_LINE('Transfer::Transfer Successful');
+		
+        --Transaction Logs
+        INSERT INTO txn_log (
+          txn_id,
+          from_acct_id,
+          to_acct_id,
+          txn_type,
+          txn_channel,
+          status,
+          amount,
+          created_at
+        ) VALUES (
+          seq_txn_id.NEXTVAL,
+          p_from_account_id,
+          p_to_account_id,
+          v_txn_type,
+          p_txn_channel,
+          'SUCCESS',
+          v_chk_balance_from_acct - p_amount,
+          SYSDATE
+        );
+		DBMS_OUTPUT.PUT_LINE('Transfer::Transaction log Record inserted for Transfer from Account ID ' || p_from_account_id || ' updated with new balance successfully');
+		
+        INSERT INTO txn_log (
+          txn_id,
+          from_acct_id,
+          to_acct_id,
+          txn_type,
+          txn_channel,
+          status,
+          amount,
+          created_at
+        ) VALUES (
+          seq_txn_id.NEXTVAL,
+          p_from_account_id,
+          p_to_account_id,
+          v_txn_type,
+          p_txn_channel,
+          'SUCCESS',
+          v_chk_balance_to_acct + p_amount,
+          SYSDATE
+        );
+		DBMS_OUTPUT.PUT_LINE('Transfer::Transaction log Record inserted for Transfer To Account ID ' || p_to_account_id || ' updated with new balance successfully');
+        COMMIT;
+
+      EXCEPTION
+        WHEN OTHERS THEN
+          ROLLBACK;  -- Undoes transaction if lock/update fails
+          RAISE;
+      END;
+
+  END IF;
+
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      DBMS_OUTPUT.PUT_LINE('internal_transfer_money::Error: Account ID ' || p_from_account_id || ' does not exist.');
+
+    WHEN inactive_from_account THEN
+      DBMS_OUTPUT.PUT_LINE('internal_transfer_money::Error: From Account ID ' || p_from_account_id || ' is blocked/inactive.');
+	  
+	WHEN inactive_to_account THEN
+      DBMS_OUTPUT.PUT_LINE('internal_transfer_money::Error: To Account ID ' || p_to_account_id || ' is blocked/inactive.');  
+
+    WHEN zero_from_account_balance THEN
+      DBMS_OUTPUT.PUT_LINE('internal_transfer_money::Error: From Account Balance is zero or below');
+	  
+	WHEN zero_transfer_amount THEN
+      DBMS_OUTPUT.PUT_LINE('internal_transfer_money::Error: Transfer amount must be greater than zero.');
+	
+	WHEN transfer_amt_exceeding_balance THEN
+      DBMS_OUTPUT.PUT_LINE('internal_transfer_money::Error: Transfer Amount is exceeding Account Balance.');
+	  
+	WHEN same_account_transfer THEN
+      DBMS_OUTPUT.PUT_LINE('internal_transfer_money::Error: Both Source and Destination Accounts are same');  
+    
+    WHEN e_check_constraint_violation THEN
+      DBMS_OUTPUT.PUT_LINE('internal_transfer_money::Error:Data integrity failure: Value violates table check rules.');
+      DBMS_OUTPUT.PUT_LINE('internal_transfer_money::Error:Technical error details: ' || SQLERRM);
+
+    WHEN OTHERS THEN
+      DBMS_OUTPUT.PUT_LINE('internal_transfer_money::Error:An unexpected error occurred: ' || SQLERRM);
+
+  END internal_transfer_money;
 
 END pkg_banking_system;
