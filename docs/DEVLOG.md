@@ -334,3 +334,117 @@ If an interviewer asked me about today's work, I would say:
 
 > "Today I diagnosed and resolved an Oracle database connectivity issue while connecting from DBeaver. The application reported an `ORA-12514` error, but instead of assuming it was a listener problem, I verified the database status using SQL*Plus. I discovered that the Oracle instance was not running (`ORA-01034`), started the database using the `STARTUP` command, confirmed that the `FREEPDB1` pluggable database was open in `READ WRITE` mode, and successfully restored connectivity. This experience strengthened my troubleshooting approach by emphasizing the importance of verifying the database instance before investigating client or listener configuration issues."
 
+
+## Day 11
+
+### Accomplishments
+
+- Successfully completed the **`internal_transfer_money`** procedure.
+- Created and executed test cases covering the major success and failure scenarios.
+- Reused most of the exception handling and validation logic from the previous procedures.
+- Implemented additional validations specific to internal account transfers.
+
+### Business Rules Implemented
+
+For an internal transfer:
+
+- Both **FROM_ACCOUNT** and **TO_ACCOUNT** must exist in the `ACCOUNT` table.
+- Both accounts must be active.
+- The source account must have sufficient balance.
+- FROM_ACCOUNT and TO_ACCOUNT must not be the same account.
+- The transfer amount must be greater than zero.
+
+### Transaction Processing
+
+The transfer is handled as a single logical transaction:
+
+```text
+Validate Amount
+      ↓
+Validate FROM Account
+      ↓
+Validate TO Account
+      ↓
+Check Same Account
+      ↓
+Lock FROM Account
+      ↓
+Lock TO Account
+      ↓
+Debit FROM Account
+      ↓
+Credit TO Account
+      ↓
+Insert FROM Transaction Log
+      ↓
+Insert TO Transaction Log
+      ↓
+COMMIT
+```
+
+### Concurrency Handling
+
+One important implementation detail was using:
+
+```sql
+SELECT ... FOR UPDATE
+```
+
+for both accounts.
+
+I used two `SELECT FOR UPDATE` statements:
+
+1. Lock the **FROM account**
+2. Lock the **TO account**
+
+This ensures that the account rows cannot be modified by another transaction while the transfer is being processed.
+
+### Account Updates
+
+A successful transfer performs two balance updates:
+
+```text
+FROM Account → Debit
+TO Account   → Credit
+```
+
+Both updates must succeed for the transfer to be considered successful.
+
+### Transaction Logging
+
+For a successful transfer, **two transaction log records** are created:
+
+```text
+Transaction Log 1 → Debit FROM Account
+Transaction Log 2 → Credit TO Account
+```
+
+This provides a clear audit trail for both sides of the transfer.
+
+### Challenge
+
+The main difference from the previous procedures was that an internal transfer involves **two accounts that both belong to the banking system**.
+
+This required additional validation and concurrency handling compared with deposit and withdrawal operations.
+
+I also had to ensure that both account updates and both transaction log entries are treated as part of the same database transaction.
+
+### What I Learned
+
+- A money transfer is not simply two `UPDATE` statements—it needs proper validation, locking, transaction management, and audit logging.
+- `SELECT FOR UPDATE` is important when multiple transactions may attempt to modify the same account simultaneously.
+- Reusing existing exception and validation logic keeps the package maintainable and avoids unnecessary duplication.
+- A successful transfer should maintain consistency between:
+  - Source account balance
+  - Destination account balance
+  - Transaction log records
+- Testing negative scenarios is just as important as testing the successful transaction.
+
+---
+
+### Interview Takeaway
+
+If an interviewer asked me about today's work, I would say:
+
+> "I implemented an internal money transfer procedure where both the source and destination accounts must exist and be active. I reused common validation and exception-handling logic from my earlier procedures and added transfer-specific validation, including preventing transfers to the same account. To handle concurrency, I used `SELECT FOR UPDATE` to lock both account rows before updating them. The transaction then debits the source account, credits the destination account, and creates two transaction log records to provide an audit trail. All these operations are treated as one logical transaction, so the transfer maintains consistency across account balances and transaction history."
+
